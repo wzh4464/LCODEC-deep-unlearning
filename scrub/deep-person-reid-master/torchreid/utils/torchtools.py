@@ -11,15 +11,17 @@ import torch.nn as nn
 from .tools import mkdir_if_missing
 
 __all__ = [
-    'save_checkpoint', 'load_checkpoint', 'resume_from_checkpoint',
-    'open_all_layers', 'open_specified_layers', 'count_num_param',
-    'load_pretrained_weights'
+    "save_checkpoint",
+    "load_checkpoint",
+    "resume_from_checkpoint",
+    "open_all_layers",
+    "open_specified_layers",
+    "count_num_param",
+    "load_pretrained_weights",
 ]
 
 
-def save_checkpoint(
-    state, save_dir, is_best=False, remove_module_from_keys=False
-):
+def save_checkpoint(state, save_dir, is_best=False, remove_module_from_keys=False):
     r"""Saves checkpoint.
 
     Args:
@@ -42,20 +44,20 @@ def save_checkpoint(
     mkdir_if_missing(save_dir)
     if remove_module_from_keys:
         # remove 'module.' in state_dict's keys
-        state_dict = state['state_dict']
+        state_dict = state["state_dict"]
         new_state_dict = OrderedDict()
         for k, v in state_dict.items():
-            if k.startswith('module.'):
+            if k.startswith("module."):
                 k = k[7:]
             new_state_dict[k] = v
-        state['state_dict'] = new_state_dict
+        state["state_dict"] = new_state_dict
     # save
-    epoch = state['epoch']
-    fpath = osp.join(save_dir, 'model.pth.tar-' + str(epoch))
+    epoch = state["epoch"]
+    fpath = osp.join(save_dir, f"model.pth.tar-{str(epoch)}")
     torch.save(state, fpath)
-    print('Checkpoint saved to "{}"'.format(fpath))
+    print(f'Checkpoint saved to "{fpath}"')
     if is_best:
-        shutil.copy(fpath, osp.join(osp.dirname(fpath), 'model-best.pth.tar'))
+        shutil.copy(fpath, osp.join(osp.dirname(fpath), "model-best.pth.tar"))
 
 
 def load_checkpoint(fpath):
@@ -76,21 +78,19 @@ def load_checkpoint(fpath):
         >>> checkpoint = load_checkpoint(fpath)
     """
     if fpath is None:
-        raise ValueError('File path is None')
+        raise ValueError("File path is None")
     fpath = osp.abspath(osp.expanduser(fpath))
     if not osp.exists(fpath):
-        raise FileNotFoundError('File is not found at "{}"'.format(fpath))
-    map_location = None if torch.cuda.is_available() else 'cpu'
+        raise FileNotFoundError(f'File is not found at "{fpath}"')
+    map_location = None if torch.cuda.is_available() else "cpu"
     try:
         checkpoint = torch.load(fpath, map_location=map_location)
     except UnicodeDecodeError:
         pickle.load = partial(pickle.load, encoding="latin1")
         pickle.Unpickler = partial(pickle.Unpickler, encoding="latin1")
-        checkpoint = torch.load(
-            fpath, pickle_module=pickle, map_location=map_location
-        )
+        checkpoint = torch.load(fpath, pickle_module=pickle, map_location=map_location)
     except Exception:
-        print('Unable to load checkpoint from "{}"'.format(fpath))
+        print(f'Unable to load checkpoint from "{fpath}"')
         raise
     return checkpoint
 
@@ -117,20 +117,20 @@ def resume_from_checkpoint(fpath, model, optimizer=None, scheduler=None):
         >>>     fpath, model, optimizer, scheduler
         >>> )
     """
-    print('Loading checkpoint from "{}"'.format(fpath))
+    print(f'Loading checkpoint from "{fpath}"')
     checkpoint = load_checkpoint(fpath)
-    model.load_state_dict(checkpoint['state_dict'])
-    print('Loaded model weights')
-    if optimizer is not None and 'optimizer' in checkpoint.keys():
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        print('Loaded optimizer')
-    if scheduler is not None and 'scheduler' in checkpoint.keys():
-        scheduler.load_state_dict(checkpoint['scheduler'])
-        print('Loaded scheduler')
-    start_epoch = checkpoint['epoch']
-    print('Last epoch = {}'.format(start_epoch))
-    if 'rank1' in checkpoint.keys():
-        print('Last rank1 = {:.1%}'.format(checkpoint['rank1']))
+    model.load_state_dict(checkpoint["state_dict"])
+    print("Loaded model weights")
+    if optimizer is not None and "optimizer" in checkpoint.keys():
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        print("Loaded optimizer")
+    if scheduler is not None and "scheduler" in checkpoint.keys():
+        scheduler.load_state_dict(checkpoint["scheduler"])
+        print("Loaded scheduler")
+    start_epoch = checkpoint["epoch"]
+    print(f"Last epoch = {start_epoch}")
+    if "rank1" in checkpoint.keys():
+        print("Last rank1 = {:.1%}".format(checkpoint["rank1"]))
     return start_epoch
 
 
@@ -142,7 +142,7 @@ def adjust_learning_rate(
     gamma=0.1,
     linear_decay=False,
     final_lr=0,
-    max_epoch=100
+    max_epoch=100,
 ):
     r"""Adjusts learning rate.
 
@@ -151,13 +151,13 @@ def adjust_learning_rate(
     if linear_decay:
         # linearly decay learning rate from base_lr to final_lr
         frac_done = epoch / max_epoch
-        lr = frac_done*final_lr + (1.-frac_done) * base_lr
+        lr = frac_done * final_lr + (1.0 - frac_done) * base_lr
     else:
         # decay learning rate by gamma for every stepsize
-        lr = base_lr * (gamma**(epoch // stepsize))
+        lr = base_lr * (gamma ** (epoch // stepsize))
 
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group["lr"] = lr
 
 
 def set_bn_to_eval(m):
@@ -165,7 +165,7 @@ def set_bn_to_eval(m):
     # 1. no update for running mean and var
     # 2. scale and shift parameters are still trainable
     classname = m.__class__.__name__
-    if classname.find('BatchNorm') != -1:
+    if classname.find("BatchNorm") != -1:
         m.eval()
 
 
@@ -207,9 +207,7 @@ def open_specified_layers(model, open_layers):
     for layer in open_layers:
         assert hasattr(
             model, layer
-        ), '"{}" is not an attribute of the model, please provide the correct name'.format(
-            layer
-        )
+        ), f'"{layer}" is not an attribute of the model, please provide the correct name'
 
     for name, module in model.named_children():
         if name in open_layers:
@@ -233,21 +231,18 @@ def count_num_param(model):
         >>> model_size = count_num_param(model)
 
     .. warning::
-        
+
         This method is deprecated in favor of
         ``torchreid.utils.compute_model_complexity``.
     """
-    warnings.warn(
-        'This method is deprecated and will be removed in the future.'
-    )
+    warnings.warn("This method is deprecated and will be removed in the future.")
 
     num_param = sum(p.numel() for p in model.parameters())
 
     if isinstance(model, nn.DataParallel):
         model = model.module
 
-    if hasattr(model,
-               'classifier') and isinstance(model.classifier, nn.Module):
+    if hasattr(model, "classifier") and isinstance(model.classifier, nn.Module):
         # we ignore the classifier because it is unused at test time
         num_param -= sum(p.numel() for p in model.classifier.parameters())
 
@@ -271,8 +266,8 @@ def load_pretrained_weights(model, weight_path):
         >>> load_pretrained_weights(model, weight_path)
     """
     checkpoint = load_checkpoint(weight_path)
-    if 'state_dict' in checkpoint:
-        state_dict = checkpoint['state_dict']
+    if "state_dict" in checkpoint:
+        state_dict = checkpoint["state_dict"]
     else:
         state_dict = checkpoint
 
@@ -281,8 +276,8 @@ def load_pretrained_weights(model, weight_path):
     matched_layers, discarded_layers = [], []
 
     for k, v in state_dict.items():
-        if k.startswith('module.'):
-            k = k[7:] # discard module.
+        if k.startswith("module."):
+            k = k[7:]  # discard module.
 
         if k in model_dict and model_dict[k].size() == v.size():
             new_state_dict[k] = v
@@ -293,20 +288,14 @@ def load_pretrained_weights(model, weight_path):
     model_dict.update(new_state_dict)
     model.load_state_dict(model_dict)
 
-    if len(matched_layers) == 0:
+    if not matched_layers:
         warnings.warn(
-            'The pretrained weights "{}" cannot be loaded, '
-            'please check the key names manually '
-            '(** ignored and continue **)'.format(weight_path)
+            f'The pretrained weights "{weight_path}" cannot be loaded, please check the key names manually (** ignored and continue **)'
         )
     else:
-        print(
-            'Successfully loaded pretrained weights from "{}"'.
-            format(weight_path)
-        )
-        if len(discarded_layers) > 0:
+        print('Successfully loaded pretrained weights from "{}"'.format(weight_path))
+        if discarded_layers:
             print(
-                '** The following layers are discarded '
-                'due to unmatched keys or layer size: {}'.
-                format(discarded_layers)
+                "** The following layers are discarded "
+                "due to unmatched keys or layer size: {}".format(discarded_layers)
             )

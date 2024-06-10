@@ -13,10 +13,10 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/syanga/pycit",
     packages=setuptools.find_packages(),
-    install_requires=['scipy>=1.4.1', 'numpy>=1.17.4', 'scikit-learn>=0.22.1'],
+    install_requires=["scipy>=1.4.1", "numpy>=1.17.4", "scikit-learn>=0.22.1"],
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License"
+        "License :: OSI Approved :: MIT License",
     ],
-    python_requires='>=3.6',
+    python_requires=">=3.6",
 )

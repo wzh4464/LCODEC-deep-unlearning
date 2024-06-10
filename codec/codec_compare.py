@@ -19,28 +19,28 @@ torch.backends.cudnn.deterministic = True
 
 n = 10000
 p = 2
-X = np.random.rand(n,p).astype(np.float16)
+X = np.random.rand(n, p).astype(np.float16)
 print(X[0])
-Y = np.mod((X[:,0] + X[:,1]), 1.0).astype(np.float16)
+Y = np.mod((X[:, 0] + X[:, 1]), 1.0).astype(np.float16)
 
 
-print('Continuous:')
-print('\tCODEC2 X1 to Y: ', scikit_codec2(X[:,1], Y))
-print('\tCODEC2 X1 and X2 to Y: ', scikit_codec2(X, Y))
-print('\tCODEC3 X1 to Y Given X2: ', scikit_codec3(X[:,0], Y, X[:,1]))
+print("Continuous:")
+print("\tCODEC2 X1 to Y: ", scikit_codec2(X[:, 1], Y))
+print("\tCODEC2 X1 and X2 to Y: ", scikit_codec2(X, Y))
+print("\tCODEC3 X1 to Y Given X2: ", scikit_codec3(X[:, 0], Y, X[:, 1]))
 
 Xb = np.random.binomial(size=n, n=1, p=0.5).astype(np.float16)
 Zb = np.random.binomial(size=n, n=1, p=0.5).astype(np.float16)
 Yb = Xb
 
-Xn = Xb + 0.01*np.random.normal(size=(n)).astype(np.float16)
-Yn = Yb + 0.01*np.random.normal(size=(n)).astype(np.float16)
-Zn = Zb + 0.01*np.random.normal(size=(n)).astype(np.float16)
+Xn = Xb + 0.01 * np.random.normal(size=(n)).astype(np.float16)
+Yn = Yb + 0.01 * np.random.normal(size=(n)).astype(np.float16)
+Zn = Zb + 0.01 * np.random.normal(size=(n)).astype(np.float16)
 
-print('Binary:')
-print('\tCODEC3 X1 to Y Given X2: ', scikit_codec3(Xb,Yb,Zb))
-print('Randomized:')
-print('\tCODEC3 X1 to Y Given X2: ', scikit_codec3(Xn,Yn,Zn))
+print("Binary:")
+print("\tCODEC3 X1 to Y Given X2: ", scikit_codec3(Xb, Yb, Zb))
+print("Randomized:")
+print("\tCODEC3 X1 to Y Given X2: ", scikit_codec3(Xn, Yn, Zn))
 
 X = torch.Tensor(X)
 print(X[0])
@@ -55,12 +55,12 @@ Yn = torch.Tensor(Yn)
 Zn = torch.Tensor(Zn)
 
 
-print('Continuous:')
-print('\tCODEC2 X1 to Y: ', torch_codec2(X[:,1], Y))
-print('\tCODEC2 X1 and X2 to Y: ', torch_codec2(X, Y))
-print('\tCODEC3 X1 to Y Given X2: ', torch_codec3(X[:,0], Y, X[:,1]))
+print("Continuous:")
+print("\tCODEC2 X1 to Y: ", torch_codec2(X[:, 1], Y))
+print("\tCODEC2 X1 and X2 to Y: ", torch_codec2(X, Y))
+print("\tCODEC3 X1 to Y Given X2: ", torch_codec3(X[:, 0], Y, X[:, 1]))
 
-print('Binary:')
-print('\tCODEC3 X1 to Y Given X2: ', torch_codec3(Xb,Yb,Zb))
-print('Randomized:')
-print('\tCODEC3 X1 to Y Given X2: ', torch_codec3(Xn,Yn,Zn))
+print("Binary:")
+print("\tCODEC3 X1 to Y Given X2: ", torch_codec3(Xb, Yb, Zb))
+print("Randomized:")
+print("\tCODEC3 X1 to Y Given X2: ", torch_codec3(Xn, Yn, Zn))

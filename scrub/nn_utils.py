@@ -6,11 +6,22 @@ from tqdm import tqdm
 from grad_utils import getGradObjs, gradNorm
 
 
-def do_epoch(model, dataloader, criterion, epoch, nepochs, optim=None, device='cpu', outString='', compute_grads=False, retrain=False):
+def do_epoch(
+    model,
+    dataloader,
+    criterion,
+    epoch,
+    nepochs,
+    optim=None,
+    device="cpu",
+    outString="",
+    compute_grads=False,
+    retrain=False,
+):
     # saves last two epochs gradients for computing finite difference Hessian
     total_loss = 0
     total_accuracy = 0
-    grad_bank = None 
+    grad_bank = None
     nsamps = 0
     if optim is not None:
         model.train()
@@ -20,7 +31,7 @@ def do_epoch(model, dataloader, criterion, epoch, nepochs, optim=None, device='c
     if compute_grads:
         total_gradnorm = 0
     for x, y_true in tqdm(dataloader, leave=False):
-    #for _, (x, y_true) in enumerate(dataloader):
+        # for _, (x, y_true) in enumerate(dataloader):
         # this is to skip the last batch if it is size 1
         # Needed if model has batchnorm layers
         # comment IN if batchnorm error
@@ -29,7 +40,7 @@ def do_epoch(model, dataloader, criterion, epoch, nepochs, optim=None, device='c
         x, y_true = x.to(device), y_true.to(device)
         y_pred = model(x)
         loss = criterion(y_pred, y_true)
-        #loss = criterion(y_pred, y_true.float())
+        # loss = criterion(y_pred, y_true.float())
 
         # for training
         if optim is not None:
@@ -38,7 +49,7 @@ def do_epoch(model, dataloader, criterion, epoch, nepochs, optim=None, device='c
             optim.step()
 
             # saving for full/old Hessian estimate for scrubbing
-            if epoch >= nepochs-2 and not retrain:
+            if epoch >= nepochs - 2 and not retrain:
                 batch_gradbank, param_bank = getGradObjs(model)
                 if grad_bank is None:
                     grad_bank = batch_gradbank
@@ -56,37 +67,47 @@ def do_epoch(model, dataloader, criterion, epoch, nepochs, optim=None, device='c
 
                 total_gradnorm += batch_norm
 
-
         nsamps += len(y_true)
         total_loss += loss.item()
         total_accuracy += (y_pred.max(1)[1] == y_true).float().sum().item()
 
-    if optim is not None:
-        if epoch >= nepochs-2  and not retrain:
-            for key in grad_bank.keys():
-                grad_bank[key] = grad_bank[key]/nsamps
-            print(f'saving params at epoch {epoch}...')
-            torch.save(param_bank, outString + f'_epoch_{epoch}_params.pt')
-            print(f'saving gradients at epoch {epoch}...')
-            torch.save(grad_bank, outString + f'_epoch_{epoch}_grads.pt')
+    if optim is not None and (epoch >= nepochs - 2 and not retrain):
+        for key in grad_bank.keys():
+            grad_bank[key] = grad_bank[key] / nsamps
+        print(f"saving params at epoch {epoch}...")
+        torch.save(param_bank, f"{outString}_epoch_{epoch}_params.pt")
+        print(f"saving gradients at epoch {epoch}...")
+        torch.save(grad_bank, f"{outString}_epoch_{epoch}_grads.pt")
 
     mean_loss = total_loss / len(dataloader)
     mean_accuracy = total_accuracy / nsamps
 
-    if compute_grads:
-        mean_gradnorm = total_gradnorm / len(dataloader)
-        return mean_loss, mean_accuracy, mean_gradnorm
-    else:
+    if not compute_grads:
         return mean_loss, mean_accuracy
+    mean_gradnorm = total_gradnorm / len(dataloader)
+    return mean_loss, mean_accuracy, mean_gradnorm
 
 
-def retrain_model(model, train_loader, val_loader, criterion, nepochs, optim, device='cpu'):
-    
+def retrain_model(
+    model, train_loader, val_loader, criterion, nepochs, optim, device="cpu"
+):
+
     print("\t ######### RETRAINING MODEL #########")
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optim, T_max=200)
 
     for epoch in range(nepochs):
-        train_loss, train_accuracy = do_epoch(model, train_loader, criterion, epoch, nepochs, optim=optim, device=device, outString='', compute_grads=False, retrain=True)
+        train_loss, train_accuracy = do_epoch(
+            model,
+            train_loader,
+            criterion,
+            epoch,
+            nepochs,
+            optim=optim,
+            device=device,
+            outString="",
+            compute_grads=False,
+            retrain=True,
+        )
 
         # Not doing validation passes as we don't care much about that, just do once at the end to report final performance
         # with torch.no_grad():
@@ -95,14 +116,38 @@ def retrain_model(model, train_loader, val_loader, criterion, nepochs, optim, de
         # tqdm.write(f'{args.model} EPOCH {epoch:03d}: train_loss={train_loss:.4f}, train_accuracy={train_accuracy:.4f} '
         #            f'val_loss={val_loss:.4f}, val_accuracy={val_accuracy:.4f}')
 
-        tqdm.write(f'\t EPOCH {epoch:03d}: train_loss={train_loss:.4f}, train_accuracy={train_accuracy:.4f} ')
+        tqdm.write(
+            f"\t EPOCH {epoch:03d}: train_loss={train_loss:.4f}, train_accuracy={train_accuracy:.4f} "
+        )
 
-        lr_scheduler.step()          # For CosineAnnealingLR
+        lr_scheduler.step()  # For CosineAnnealingLR
 
     with torch.no_grad():
-        val_loss, val_accuracy = do_epoch(model, val_loader, criterion, 0, 0, optim=None, device=device, outString='', compute_grads=False, retrain=True)
+        val_loss, val_accuracy = do_epoch(
+            model,
+            val_loader,
+            criterion,
+            0,
+            0,
+            optim=None,
+            device=device,
+            outString="",
+            compute_grads=False,
+            retrain=True,
+        )
 
-    retrain_loss, retrain_accuracy, retrain_gradnorm = do_epoch(model, train_loader, criterion, 0, 0, optim=None, device=device, outString='', compute_grads=True, retrain=True)
+    retrain_loss, retrain_accuracy, retrain_gradnorm = do_epoch(
+        model,
+        train_loader,
+        criterion,
+        0,
+        0,
+        optim=None,
+        device=device,
+        outString="",
+        compute_grads=True,
+        retrain=True,
+    )
 
     return val_loss, val_accuracy, retrain_loss, retrain_accuracy, retrain_gradnorm
 

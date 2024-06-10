@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchfile
 
+
 class VGG_16(nn.Module):
     """
     Main Class
@@ -44,7 +45,7 @@ class VGG_16(nn.Module):
             self.load_weights()
 
     def load_weights(self, path="./models/vggface/pretrained/VGG_FACE.t7"):
-        """ Function to load luatorch pretrained
+        """Function to load luatorch pretrained
 
         Args:
             path: path for the luatorch pretrained
@@ -52,7 +53,7 @@ class VGG_16(nn.Module):
         model = torchfile.load(path)
         counter = 1
         block = 1
-        for i, layer in enumerate(model.modules):
+        for layer in model.modules:
             if layer.weight is not None:
                 if block <= 5:
                     self_layer = getattr(self, "conv_%d_%d" % (block, counter))
@@ -60,16 +61,19 @@ class VGG_16(nn.Module):
                     if counter > self.block_size[block - 1]:
                         counter = 1
                         block += 1
-                    self_layer.weight.data[...] = torch.tensor(layer.weight).view_as(self_layer.weight)[...]
-                    self_layer.bias.data[...] = torch.tensor(layer.bias).view_as(self_layer.bias)[...]
                 else:
                     self_layer = getattr(self, "fc%d" % (block))
                     block += 1
-                    self_layer.weight.data[...] = torch.tensor(layer.weight).view_as(self_layer.weight)[...]
-                    self_layer.bias.data[...] = torch.tensor(layer.bias).view_as(self_layer.bias)[...]
+
+                self_layer.weight.data[...] = torch.tensor(layer.weight).view_as(
+                    self_layer.weight
+                )[...]
+                self_layer.bias.data[...] = torch.tensor(layer.bias).view_as(
+                    self_layer.bias
+                )[...]
 
     def forward(self, x):
-        """ Pytorch forward
+        """Pytorch forward
 
         Args:
             x: input image (224x224)
@@ -114,7 +118,9 @@ if __name__ == "__main__":
     im = torch.Tensor(im).permute(2, 0, 1).view(1, 3, 224, 224).double()
 
     model.eval()
-    im -= torch.Tensor(np.array([129.1863, 104.7624, 93.5940])).double().view(1, 3, 1, 1)
+    im -= (
+        torch.Tensor(np.array([129.1863, 104.7624, 93.5940])).double().view(1, 3, 1, 1)
+    )
     preds = F.softmax(model(im), dim=1)
     values, indices = preds.max(-1)
     print(indices)

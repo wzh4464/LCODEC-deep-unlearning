@@ -7,13 +7,22 @@ class BullseyeData:
     def __init__(self, n, eps, copies=1, scale_4=False):
         eps_list = [0.025, 0.05, 0.075, 0.1, 0.125, -1, -2]
         assert eps in eps_list
-        a,b = 0.25, 0.5
-        c,d = 0.75, 1.0
+        a, b = 0.25, 0.5
+        c, d = 0.75, 1.0
         self.n = n
         self.copies = copies
-        
+
         self.eps = eps
-        if eps == 0.025:
+        if eps == -1:
+            self.ground_truth = (
+                (2.4026 + 1.8095 + 1.5040 + 1.3163 + 1.1931) * (1 / 5) * copies
+            )
+        elif eps == -2:
+            # W is 0-mean gaussian, eps is 0.025 if W<0, 0.125 if W>=0.
+            # ground truth is I(X;Y|W)
+            self.ground_truth = (2.4026 + 1.1931) * 0.5 * copies
+
+        elif eps == 0.025:
             self.ground_truth = 2.4026 * copies
         elif eps == 0.05:
             self.ground_truth = 1.8095 * copies
@@ -23,39 +32,39 @@ class BullseyeData:
             self.ground_truth = 1.3163 * copies
         elif eps == 0.125:
             self.ground_truth = 1.1931 * copies
-        elif eps == -1:
-            self.ground_truth = (2.4026 + 1.8095 + 1.5040 + 1.3163 + 1.1931)*(1/5) * copies
-        elif eps == -2:
-            # W is 0-mean gaussian, eps is 0.025 if W<0, 0.125 if W>=0.
-            # ground truth is I(X;Y|W)
-            self.ground_truth = (2.4026 + 1.1931)*0.5 * copies
-
         # scale by 4
         if scale_4:
-            a = 4*a
-            b = 4*b
-            c = 4*c
-            d = 4*d
-            eps = 4*eps
-            
+            a *= 4
+            b *= 4
+            c *= 4
+            d *= 4
+            eps = 4 * eps
+
         # init
         idx = np.random.permutation(n)
         self.R = np.zeros((n, copies))
         self.T = np.zeros((n, copies))
         self.Y = np.zeros((n, copies))
-        self.X = np.zeros((n, 2*copies)) 
+        self.X = np.zeros((n, 2 * copies))
 
         for i in range(copies):
-            self.R[:,i] = np.hstack((np.random.uniform(a,b,size=int(n/2)), np.random.uniform(c,d,size=n-int(n/2))))[idx]
+            self.R[:, i] = np.hstack(
+                (
+                    np.random.uniform(a, b, size=int(n / 2)),
+                    np.random.uniform(c, d, size=n - int(n / 2)),
+                )
+            )[idx]
 
         if eps == -1:
-            self.e = np.random.choice(3, n, replace=True).reshape(-1,1)
+            self.e = np.random.choice(3, n, replace=True).reshape(-1, 1)
             N = np.zeros(self.R.shape)
             for i in range(3):
-                N[self.e==i] = np.random.uniform(-eps_list[i], eps_list[i], size=N[self.e==i].shape)
+                N[self.e == i] = np.random.uniform(
+                    -eps_list[i], eps_list[i], size=N[self.e == i].shape
+                )
             self.Y = self.R + N
         if eps == -2:
-            self.W = np.random.normal(0, 1, size=n).reshape(-1,1)
+            self.W = np.random.normal(0, 1, size=n).reshape(-1, 1)
             N = np.zeros(self.R.shape)
             N[self.W < 0] = np.random.uniform(-0.025, 0.025, size=N[self.W < 0].shape)
             N[self.W >= 0] = np.random.uniform(-0.125, 0.125, size=N[self.W >= 0].shape)
@@ -66,22 +75,19 @@ class BullseyeData:
             self.Y = self.R + N
 
         for i in range(copies):
-            self.T[:,i] = np.random.uniform(0, 2*np.pi, size=n)
-            self.X[:,i] = self.R[:,i]*np.cos(self.T[:,i])
-            self.X[:,i+copies] = self.R[:,i]*np.sin(self.T[:,i])
-
+            self.T[:, i] = np.random.uniform(0, 2 * np.pi, size=n)
+            self.X[:, i] = self.R[:, i] * np.cos(self.T[:, i])
+            self.X[:, i + copies] = self.R[:, i] * np.sin(self.T[:, i])
 
     def make_X_data(self, dest, include_polar=False):
         with h5py.File(dest, "w") as f:
             f.create_dataset("X", data=np.expand_dims(self.X, 2))
             f.create_dataset("Y", data=self.Y)
 
-
     def make_R_data(self, dest):
         with h5py.File(dest, "w") as f:
             f.create_dataset("X", data=np.expand_dims(self.R, 2))
             f.create_dataset("Y", data=self.Y)
-
 
     def make_XR_data(self, dest, include_polar=False):
         R = np.concatenate((self.R, np.zeros(self.R.shape)), axis=1)
@@ -90,7 +96,6 @@ class BullseyeData:
             f.create_dataset("X", data=Z)
             f.create_dataset("Y", data=self.Y)
 
-
     def make_XRT_data(self, dest, include_polar=False):
         R = np.concatenate((self.R, np.zeros(self.R.shape)), axis=1)
         T = np.concatenate((self.T, np.zeros(self.T.shape)), axis=1)
@@ -98,7 +103,6 @@ class BullseyeData:
         with h5py.File(dest, "w") as f:
             f.create_dataset("X", data=Z)
             f.create_dataset("Y", data=self.Y)
-
 
     def make_XRTe_data(self, dest, include_polar=False):
         R = np.concatenate((self.R, np.zeros(self.R.shape)), axis=1)
@@ -109,4 +113,3 @@ class BullseyeData:
         with h5py.File(dest, "w") as f:
             f.create_dataset("X", data=Z)
             f.create_dataset("Y", data=self.Y)
-

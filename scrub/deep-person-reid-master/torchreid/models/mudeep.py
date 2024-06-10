@@ -3,12 +3,12 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-__all__ = ['MuDeep']
+__all__ = ["MuDeep"]
 
 
 class ConvBlock(nn.Module):
     """Basic convolutional block.
-    
+
     convolution + batch normalization + relu.
 
     Args:
@@ -69,8 +69,7 @@ class MultiScaleA(nn.Module):
         s2 = self.stream2(x)
         s3 = self.stream3(x)
         s4 = self.stream4(x)
-        y = torch.cat([s1, s2, s3, s4], dim=1)
-        return y
+        return torch.cat([s1, s2, s3, s4], dim=1)
 
 
 class Reduction(nn.Module):
@@ -90,8 +89,7 @@ class Reduction(nn.Module):
         s1 = self.stream1(x)
         s2 = self.stream2(x)
         s3 = self.stream3(x)
-        y = torch.cat([s1, s2, s3], dim=1)
-        return y
+        return torch.cat([s1, s2, s3], dim=1)
 
 
 class MultiScaleB(nn.Module):
@@ -144,8 +142,7 @@ class Fusion(nn.Module):
         s2 = self.a2.expand_as(x2) * x2
         s3 = self.a3.expand_as(x3) * x3
         s4 = self.a4.expand_as(x4) * x4
-        y = self.avgpool(s1 + s2 + s3 + s4)
-        return y
+        return self.avgpool(s1 + s2 + s3 + s4)
 
 
 class MuDeep(nn.Module):
@@ -159,7 +156,7 @@ class MuDeep(nn.Module):
         - ``mudeep``: Multiscale deep neural network.
     """
 
-    def __init__(self, num_classes, loss='softmax', **kwargs):
+    def __init__(self, num_classes, loss="softmax", **kwargs):
         super(MuDeep, self).__init__()
         self.loss = loss
 
@@ -198,9 +195,9 @@ class MuDeep(nn.Module):
         if not self.training:
             return x
 
-        if self.loss == 'softmax':
+        if self.loss == "softmax":
             return y
-        elif self.loss == 'triplet':
+        elif self.loss == "triplet":
             return y, x
         else:
-            raise KeyError('Unsupported loss: {}'.format(self.loss))
+            raise KeyError(f"Unsupported loss: {self.loss}")

@@ -1,5 +1,6 @@
 import torch.nn as nn
 
+
 class LogisticRegressor(nn.Module):
 
     def __init__(self, input_size=784, num_classes=10):
@@ -9,8 +10,8 @@ class LogisticRegressor(nn.Module):
 
     def forward(self, x):
         x = x.view(-1, self.input_size)
-        logits = self.linear(x)
-        return logits
+        return self.linear(x)
+
 
 class Logistic2NN(nn.Module):
 
@@ -25,6 +26,4 @@ class Logistic2NN(nn.Module):
         x = x.view(-1, self.input_size)
         out = self.linear1(x)
         out = self.act1(out)
-        logits = self.linear2(out)
-        return logits
-
+        return self.linear2(out)

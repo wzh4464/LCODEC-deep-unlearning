@@ -10,29 +10,48 @@ import torch.utils.data as data
 from PIL import Image
 import glob
 
+
 class OurCelebA(data.Dataset):
     """
     Args:
         root (string): Root directory of dataset
     """
-    def __init__(self, root, train, transform=None, n_samples=None, relimgdir='img_align_celeba', identity_file="identity_CelebA.txt", n_classes=100):
+
+    def __init__(
+        self,
+        root,
+        train,
+        transform=None,
+        n_samples=None,
+        relimgdir="img_align_celeba",
+        identity_file="identity_CelebA.txt",
+        n_classes=100,
+    ):
 
         super(OurCelebA, self).__init__()
 
         self.root = root
         self.imgdir = os.path.join(root, relimgdir)
-        self.train = train  # training set (0) / val set (1) 
+        self.train = train  # training set (0) / val set (1)
         self.transform = transform
         self.identity_file = identity_file
         self.n_classes = n_classes
 
         try:
-            self.identity_data = pd.read_csv(os.path.join(root, self.identity_file), sep=" ", header=None)
-            self.identity_data.columns = ["image_id","person_id"]
-        except FileNotFoundError:
-            raise ValueError("Image partition file {:s} does not exist".format(os.path.join(root, self.identity_file)))
+            self.identity_data = pd.read_csv(
+                os.path.join(root, self.identity_file), sep=" ", header=None
+            )
+            self.identity_data.columns = ["image_id", "person_id"]
+        except FileNotFoundError as e:
+            raise ValueError(
+                "Image partition file {:s} does not exist".format(
+                    os.path.join(root, self.identity_file)
+                )
+            ) from e
 
-        self.filtered_data = self.identity_data.groupby('person_id').filter(lambda x: len(x) >= 30)
+        self.filtered_data = self.identity_data.groupby("person_id").filter(
+            lambda x: len(x) >= 30
+        )
         unique_ids = self.filtered_data.person_id.unique()
         print(unique_ids)
         luid = list(unique_ids)
@@ -45,29 +64,31 @@ class OurCelebA(data.Dataset):
 
         train_pt_counts = {}
 
-        for i in self.filtered_data['person_id']:
+        for i in self.filtered_data["person_id"]:
             current_class = luid.index(i)
             class_values.append(current_class)
             if i not in train_pt_counts:
                 train_pt_counts[i] = 1
             else:
                 train_pt_counts[i] += 1
-            if current_class>=self.n_classes:
+            if current_class >= self.n_classes:
                 # Skip these classes
                 train_val_values.append(-1)
             else:
-                if train_pt_counts[i] >25:
+                if train_pt_counts[i] > 25:
                     train_val_values.append(1)
                 else:
                     train_val_values.append(0)
 
-        self.filtered_data['class'] = class_values
-        self.filtered_data['train_val'] = train_val_values
+        self.filtered_data["class"] = class_values
+        self.filtered_data["train_val"] = train_val_values
 
-        self.sel_rows = self.filtered_data.loc[self.filtered_data['train_val']==self.train]
+        self.sel_rows = self.filtered_data.loc[
+            self.filtered_data["train_val"] == self.train
+        ]
 
-        self.image_names = self.sel_rows.iloc[:,0].to_numpy()
-        self.target_labels = self.sel_rows.iloc[:,2].to_numpy() 
+        self.image_names = self.sel_rows.iloc[:, 0].to_numpy()
+        self.target_labels = self.sel_rows.iloc[:, 2].to_numpy()
 
         if n_samples is not None:
             self.image_names = self.image_names[:n_samples]
@@ -83,7 +104,7 @@ class OurCelebA(data.Dataset):
         pilimg = Image.open(os.path.join(self.imgdir, fname))
         # img = np.asarray(pilimg)
         # img = np.transpose(img, axes=(2,0,1))
-        
+
         # img = img - np.min(img)
         # img = np.float32(img/np.max(img))
 
@@ -94,11 +115,8 @@ class OurCelebA(data.Dataset):
 
         return pilimg, target_label
 
-
     def __len__(self):
         return self.n_samples
-
-
 
 
 def filter_open(img_paths):
@@ -106,7 +124,7 @@ def filter_open(img_paths):
     for path in img_paths:
         img_name = path.split("/")[-1]
         open_close = int(img_name.split("_")[4])
-        if open_close ==1:
+        if open_close == 1:
             filter_paths.append(path)
     return filter_paths
 
@@ -123,11 +141,13 @@ def process_paths(subject_paths, set_type):
         exit(0)
     return set_type_images
 
+
 class MRLeye(data.Dataset):
     """
     Args:
         root (string): Root directory of dataset
     """
+
     def __init__(self, root, train, transform=None):
 
         super(MRLeye, self).__init__()
@@ -135,27 +155,26 @@ class MRLeye(data.Dataset):
         self.root = root
         self.train = train  # training set (0) / val set (1) / test set (2)
         self.transform = transform
-        
-        all_subjects = glob.glob(self.root+"s0*")
 
-        n_subjects  = 0
+        all_subjects = glob.glob(self.root + "s0*")
+
+        n_subjects = 0
         self.sub_id_mapper = {}
 
         all_image_paths = []
         for sub_path in all_subjects:
             # print(sub_path)
-            per_subject_images = glob.glob(sub_path+ "/*.png")
+            per_subject_images = glob.glob(sub_path + "/*.png")
             # print(len(per_subject_images))
             filtered_subject_images = filter_open(per_subject_images)
             # print(len(filtered_subject_images))
             filtered_subject_images.sort()
             if len(filtered_subject_images) >= 400:
-                self.sub_id_mapper[sub_path.split('/')[-1]] = n_subjects
+                self.sub_id_mapper[sub_path.split("/")[-1]] = n_subjects
                 n_subjects += 1
-                all_image_paths.extend(process_paths(filtered_subject_images, self.train))
-            else:
-                pass
-
+                all_image_paths.extend(
+                    process_paths(filtered_subject_images, self.train)
+                )
         self.n_subjects = n_subjects
         print("Number of unique subjects: ", self.n_subjects)
         print("Subject id mapper:", self.sub_id_mapper)
@@ -169,7 +188,7 @@ class MRLeye(data.Dataset):
         pilimg = Image.open(fname)
         # img = np.asarray(pilimg)
         # img = np.transpose(img, axes=(2,0,1))
-        
+
         # img = img - np.min(img)
         # img = np.float32(img/np.max(img))
 
@@ -179,7 +198,6 @@ class MRLeye(data.Dataset):
         target_label = self.sub_id_mapper[fname.split("/")[-1].split("_")[0]]
         # print(target_label)
         return pilimg, target_label
-
 
     def __len__(self):
         return self.n_samples

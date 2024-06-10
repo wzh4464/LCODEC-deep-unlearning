@@ -3,33 +3,31 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
-__all__ = ['inceptionv4']
+__all__ = ["inceptionv4"]
 """
 Code imported from https://github.com/Cadene/pretrained-models.pytorch
 """
 
 pretrained_settings = {
-    'inceptionv4': {
-        'imagenet': {
-            'url':
-            'http://data.lip6.fr/cadene/pretrainedmodels/inceptionv4-8e4777a0.pth',
-            'input_space': 'RGB',
-            'input_size': [3, 299, 299],
-            'input_range': [0, 1],
-            'mean': [0.5, 0.5, 0.5],
-            'std': [0.5, 0.5, 0.5],
-            'num_classes': 1000
+    "inceptionv4": {
+        "imagenet": {
+            "url": "http://data.lip6.fr/cadene/pretrainedmodels/inceptionv4-8e4777a0.pth",
+            "input_space": "RGB",
+            "input_size": [3, 299, 299],
+            "input_range": [0, 1],
+            "mean": [0.5, 0.5, 0.5],
+            "std": [0.5, 0.5, 0.5],
+            "num_classes": 1000,
         },
-        'imagenet+background': {
-            'url':
-            'http://data.lip6.fr/cadene/pretrainedmodels/inceptionv4-8e4777a0.pth',
-            'input_space': 'RGB',
-            'input_size': [3, 299, 299],
-            'input_range': [0, 1],
-            'mean': [0.5, 0.5, 0.5],
-            'std': [0.5, 0.5, 0.5],
-            'num_classes': 1001
-        }
+        "imagenet+background": {
+            "url": "http://data.lip6.fr/cadene/pretrainedmodels/inceptionv4-8e4777a0.pth",
+            "input_space": "RGB",
+            "input_size": [3, 299, 299],
+            "input_range": [0, 1],
+            "mean": [0.5, 0.5, 0.5],
+            "std": [0.5, 0.5, 0.5],
+            "num_classes": 1001,
+        },
     }
 }
 
@@ -44,13 +42,13 @@ class BasicConv2d(nn.Module):
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
-            bias=False
-        ) # verify bias false
+            bias=False,
+        )  # verify bias false
         self.bn = nn.BatchNorm2d(
             out_planes,
-            eps=0.001, # value found in tensorflow
-            momentum=0.1, # default pytorch value
-            affine=True
+            eps=0.001,  # value found in tensorflow
+            momentum=0.1,  # default pytorch value
+            affine=True,
         )
         self.relu = nn.ReLU(inplace=True)
 
@@ -71,8 +69,7 @@ class Mixed_3a(nn.Module):
     def forward(self, x):
         x0 = self.maxpool(x)
         x1 = self.conv(x)
-        out = torch.cat((x0, x1), 1)
-        return out
+        return torch.cat((x0, x1), 1)
 
 
 class Mixed_4a(nn.Module):
@@ -82,21 +79,20 @@ class Mixed_4a(nn.Module):
 
         self.branch0 = nn.Sequential(
             BasicConv2d(160, 64, kernel_size=1, stride=1),
-            BasicConv2d(64, 96, kernel_size=3, stride=1)
+            BasicConv2d(64, 96, kernel_size=3, stride=1),
         )
 
         self.branch1 = nn.Sequential(
             BasicConv2d(160, 64, kernel_size=1, stride=1),
             BasicConv2d(64, 64, kernel_size=(1, 7), stride=1, padding=(0, 3)),
             BasicConv2d(64, 64, kernel_size=(7, 1), stride=1, padding=(3, 0)),
-            BasicConv2d(64, 96, kernel_size=(3, 3), stride=1)
+            BasicConv2d(64, 96, kernel_size=(3, 3), stride=1),
         )
 
     def forward(self, x):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
-        out = torch.cat((x0, x1), 1)
-        return out
+        return torch.cat((x0, x1), 1)
 
 
 class Mixed_5a(nn.Module):
@@ -109,8 +105,7 @@ class Mixed_5a(nn.Module):
     def forward(self, x):
         x0 = self.conv(x)
         x1 = self.maxpool(x)
-        out = torch.cat((x0, x1), 1)
-        return out
+        return torch.cat((x0, x1), 1)
 
 
 class Inception_A(nn.Module):
@@ -121,18 +116,18 @@ class Inception_A(nn.Module):
 
         self.branch1 = nn.Sequential(
             BasicConv2d(384, 64, kernel_size=1, stride=1),
-            BasicConv2d(64, 96, kernel_size=3, stride=1, padding=1)
+            BasicConv2d(64, 96, kernel_size=3, stride=1, padding=1),
         )
 
         self.branch2 = nn.Sequential(
             BasicConv2d(384, 64, kernel_size=1, stride=1),
             BasicConv2d(64, 96, kernel_size=3, stride=1, padding=1),
-            BasicConv2d(96, 96, kernel_size=3, stride=1, padding=1)
+            BasicConv2d(96, 96, kernel_size=3, stride=1, padding=1),
         )
 
         self.branch3 = nn.Sequential(
             nn.AvgPool2d(3, stride=1, padding=1, count_include_pad=False),
-            BasicConv2d(384, 96, kernel_size=1, stride=1)
+            BasicConv2d(384, 96, kernel_size=1, stride=1),
         )
 
     def forward(self, x):
@@ -140,8 +135,7 @@ class Inception_A(nn.Module):
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 
 class Reduction_A(nn.Module):
@@ -153,7 +147,7 @@ class Reduction_A(nn.Module):
         self.branch1 = nn.Sequential(
             BasicConv2d(384, 192, kernel_size=1, stride=1),
             BasicConv2d(192, 224, kernel_size=3, stride=1, padding=1),
-            BasicConv2d(224, 256, kernel_size=3, stride=2)
+            BasicConv2d(224, 256, kernel_size=3, stride=2),
         )
 
         self.branch2 = nn.MaxPool2d(3, stride=2)
@@ -162,8 +156,7 @@ class Reduction_A(nn.Module):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
         x2 = self.branch2(x)
-        out = torch.cat((x0, x1, x2), 1)
-        return out
+        return torch.cat((x0, x1, x2), 1)
 
 
 class Inception_B(nn.Module):
@@ -174,33 +167,21 @@ class Inception_B(nn.Module):
 
         self.branch1 = nn.Sequential(
             BasicConv2d(1024, 192, kernel_size=1, stride=1),
-            BasicConv2d(
-                192, 224, kernel_size=(1, 7), stride=1, padding=(0, 3)
-            ),
-            BasicConv2d(
-                224, 256, kernel_size=(7, 1), stride=1, padding=(3, 0)
-            )
+            BasicConv2d(192, 224, kernel_size=(1, 7), stride=1, padding=(0, 3)),
+            BasicConv2d(224, 256, kernel_size=(7, 1), stride=1, padding=(3, 0)),
         )
 
         self.branch2 = nn.Sequential(
             BasicConv2d(1024, 192, kernel_size=1, stride=1),
-            BasicConv2d(
-                192, 192, kernel_size=(7, 1), stride=1, padding=(3, 0)
-            ),
-            BasicConv2d(
-                192, 224, kernel_size=(1, 7), stride=1, padding=(0, 3)
-            ),
-            BasicConv2d(
-                224, 224, kernel_size=(7, 1), stride=1, padding=(3, 0)
-            ),
-            BasicConv2d(
-                224, 256, kernel_size=(1, 7), stride=1, padding=(0, 3)
-            )
+            BasicConv2d(192, 192, kernel_size=(7, 1), stride=1, padding=(3, 0)),
+            BasicConv2d(192, 224, kernel_size=(1, 7), stride=1, padding=(0, 3)),
+            BasicConv2d(224, 224, kernel_size=(7, 1), stride=1, padding=(3, 0)),
+            BasicConv2d(224, 256, kernel_size=(1, 7), stride=1, padding=(0, 3)),
         )
 
         self.branch3 = nn.Sequential(
             nn.AvgPool2d(3, stride=1, padding=1, count_include_pad=False),
-            BasicConv2d(1024, 128, kernel_size=1, stride=1)
+            BasicConv2d(1024, 128, kernel_size=1, stride=1),
         )
 
     def forward(self, x):
@@ -208,8 +189,7 @@ class Inception_B(nn.Module):
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 
 class Reduction_B(nn.Module):
@@ -219,17 +199,14 @@ class Reduction_B(nn.Module):
 
         self.branch0 = nn.Sequential(
             BasicConv2d(1024, 192, kernel_size=1, stride=1),
-            BasicConv2d(192, 192, kernel_size=3, stride=2)
+            BasicConv2d(192, 192, kernel_size=3, stride=2),
         )
 
         self.branch1 = nn.Sequential(
             BasicConv2d(1024, 256, kernel_size=1, stride=1),
-            BasicConv2d(
-                256, 256, kernel_size=(1, 7), stride=1, padding=(0, 3)
-            ),
-            BasicConv2d(
-                256, 320, kernel_size=(7, 1), stride=1, padding=(3, 0)
-            ), BasicConv2d(320, 320, kernel_size=3, stride=2)
+            BasicConv2d(256, 256, kernel_size=(1, 7), stride=1, padding=(0, 3)),
+            BasicConv2d(256, 320, kernel_size=(7, 1), stride=1, padding=(3, 0)),
+            BasicConv2d(320, 320, kernel_size=3, stride=2),
         )
 
         self.branch2 = nn.MaxPool2d(3, stride=2)
@@ -238,8 +215,7 @@ class Reduction_B(nn.Module):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
         x2 = self.branch2(x)
-        out = torch.cat((x0, x1, x2), 1)
-        return out
+        return torch.cat((x0, x1, x2), 1)
 
 
 class Inception_C(nn.Module):
@@ -273,7 +249,7 @@ class Inception_C(nn.Module):
 
         self.branch3 = nn.Sequential(
             nn.AvgPool2d(3, stride=1, padding=1, count_include_pad=False),
-            BasicConv2d(1536, 256, kernel_size=1, stride=1)
+            BasicConv2d(1536, 256, kernel_size=1, stride=1),
         )
 
     def forward(self, x):
@@ -293,8 +269,7 @@ class Inception_C(nn.Module):
 
         x3 = self.branch3(x)
 
-        out = torch.cat((x0, x1, x2, x3), 1)
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 
 class InceptionV4(nn.Module):
@@ -323,7 +298,7 @@ class InceptionV4(nn.Module):
             Inception_A(),
             Inception_A(),
             Inception_A(),
-            Reduction_A(), # Mixed_6a
+            Reduction_A(),  # Mixed_6a
             Inception_B(),
             Inception_B(),
             Inception_B(),
@@ -331,10 +306,10 @@ class InceptionV4(nn.Module):
             Inception_B(),
             Inception_B(),
             Inception_B(),
-            Reduction_B(), # Mixed_7a
+            Reduction_B(),  # Mixed_7a
             Inception_C(),
             Inception_C(),
-            Inception_C()
+            Inception_C(),
         )
         self.global_avgpool = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Linear(1536, num_classes)
@@ -349,17 +324,17 @@ class InceptionV4(nn.Module):
 
         y = self.classifier(v)
 
-        if self.loss == 'softmax':
+        if self.loss == "softmax":
             return y
-        elif self.loss == 'triplet':
+        elif self.loss == "triplet":
             return y, v
         else:
-            raise KeyError('Unsupported loss: {}'.format(self.loss))
+            raise KeyError(f"Unsupported loss: {self.loss}")
 
 
 def init_pretrained_weights(model, model_url):
     """Initializes model with pretrained weights.
-    
+
     Layers that don't match with pretrained layers in name or size are kept unchanged.
     """
     pretrain_dict = model_zoo.load_url(model_url)
@@ -373,9 +348,9 @@ def init_pretrained_weights(model, model_url):
     model.load_state_dict(model_dict)
 
 
-def inceptionv4(num_classes, loss='softmax', pretrained=True, **kwargs):
+def inceptionv4(num_classes, loss="softmax", pretrained=True, **kwargs):
     model = InceptionV4(num_classes, loss, **kwargs)
     if pretrained:
-        model_url = pretrained_settings['inceptionv4']['imagenet']['url']
+        model_url = pretrained_settings["inceptionv4"]["imagenet"]["url"]
         init_pretrained_weights(model, model_url)
     return model

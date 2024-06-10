@@ -8,24 +8,37 @@ class BaseDataLoader(DataLoader):
     """
     Base class for all data loaders
     """
-    def __init__(self, dataset, batch_size, shuffle, validation_split, test_split, num_workers, seed=0, collate_fn=default_collate):
+
+    def __init__(
+        self,
+        dataset,
+        batch_size,
+        shuffle,
+        validation_split,
+        test_split,
+        num_workers,
+        seed=0,
+        collate_fn=default_collate,
+    ):
         self.validation_split = validation_split
         self.test_split = test_split
         self.shuffle = shuffle
-        
+
         self.batch_idx = 0
         self.n_samples = len(dataset)
 
-        self.sampler, self.valid_sampler, self.test_sampler = self._split_sampler(self.validation_split, self.test_split)
+        self.sampler, self.valid_sampler, self.test_sampler = self._split_sampler(
+            self.validation_split, self.test_split
+        )
         self.seed = seed
 
         self.init_kwargs = {
-            'dataset': dataset,
-            'batch_size': batch_size,
-            'shuffle': self.shuffle,
-            'collate_fn': collate_fn,
-            'num_workers': num_workers
-            }
+            "dataset": dataset,
+            "batch_size": batch_size,
+            "shuffle": self.shuffle,
+            "collate_fn": collate_fn,
+            "num_workers": num_workers,
+        }
         super(BaseDataLoader, self).__init__(sampler=self.sampler, **self.init_kwargs)
 
     def _split_sampler(self, split, split_test):
@@ -40,9 +53,9 @@ class BaseDataLoader(DataLoader):
         len_valid = int(self.n_samples * split)
         len_test = int(self.n_samples * split_test)
 
-        test_idx = idx_full[0:len_test]
-        valid_idx = idx_full[len_test:len_test+len_valid]
-        train_idx = np.delete(idx_full, np.arange(0, len_test+len_valid))
+        test_idx = idx_full[:len_test]
+        valid_idx = idx_full[len_test : len_test + len_valid]
+        train_idx = np.delete(idx_full, np.arange(0, len_test + len_valid))
 
         train_sampler = SubsetRandomSampler(train_idx)
         valid_sampler = SubsetRandomSampler(valid_idx)

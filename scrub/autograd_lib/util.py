@@ -11,14 +11,14 @@ from PIL import Image
 _pytorch_floating_point_types = (torch.float16, torch.float32, torch.float64)
 
 _numpy_type_map = {
-    'float64': torch.DoubleTensor,
-    'float32': torch.FloatTensor,
-    'float16': torch.HalfTensor,
-    'int64': torch.LongTensor,
-    'int32': torch.IntTensor,
-    'int16': torch.ShortTensor,
-    'int8': torch.CharTensor,
-    'uint8': torch.ByteTensor,
+    "float64": torch.DoubleTensor,
+    "float32": torch.FloatTensor,
+    "float16": torch.HalfTensor,
+    "int64": torch.LongTensor,
+    "int32": torch.IntTensor,
+    "int16": torch.ShortTensor,
+    "int8": torch.CharTensor,
+    "uint8": torch.ByteTensor,
 }
 
 
@@ -26,12 +26,10 @@ def pytorch_dtype_to_floating_numpy_dtype(dtype):
     """Converts PyTorch dtype to numpy floating point dtype, defaulting to np.float32 for non-floating point types."""
     if dtype == torch.float64:
         dtype = np.float64
-    elif dtype == torch.float32:
+    elif dtype == torch.float32 or dtype != torch.float16:
         dtype = np.float32
-    elif dtype == torch.float16:
-        dtype = np.float16
     else:
-        dtype = np.float32
+        dtype = np.float16
     return dtype
 
 
@@ -50,11 +48,13 @@ def to_numpy(x, dtype: np.dtype = None) -> np.ndarray:
     assert np.issubdtype(dtype, np.floating), "dtype must be real-valued floating point"
 
     # Convert to normal_form expression from a special form (https://reference.wolfram.com/language/ref/Normal.html)
-    if hasattr(x, 'normal_form'):
+    if hasattr(x, "normal_form"):
         x = x.normal_form()
 
     if type(x) == np.ndarray:
-        assert np.issubdtype(x.dtype, np.floating), f"numpy type promotion not implemented for {x.dtype}"
+        assert np.issubdtype(
+            x.dtype, np.floating
+        ), f"numpy type promotion not implemented for {x.dtype}"
 
     if type(x) == torch.Tensor:
         dtype = pytorch_dtype_to_floating_numpy_dtype(x.dtype)
@@ -66,9 +66,13 @@ def to_numpy(x, dtype: np.dtype = None) -> np.ndarray:
 
     # Some Python type, use numpy conversion
     result = np.array(x, dtype=dtype)
-    assert np.issubdtype(result.dtype, np.number), f"Provided object ({result}) is not numeric, has type {result.dtype}"
+    assert np.issubdtype(
+        result.dtype, np.number
+    ), f"Provided object ({result}) is not numeric, has type {result.dtype}"
     if dtype is None:
-        return result.astype(pytorch_dtype_to_floating_numpy_dtype(torch.get_default_dtype()))
+        return result.astype(
+            pytorch_dtype_to_floating_numpy_dtype(torch.get_default_dtype())
+        )
     return result
 
 
@@ -76,7 +80,7 @@ def to_numpys(*xs, dtype=np.float32):
     return (to_numpy(x, dtype) for x in xs)
 
 
-def check_equal(observed, truth, rtol=1e-9, atol=1e-12, label: str= '') -> None:
+def check_equal(observed, truth, rtol=1e-9, atol=1e-12, label: str = "") -> None:
     """
     Assert fail any entries in two arrays are not close to each to desired tolerance. See np.allclose for meaning of rtol, atol
 
@@ -85,14 +89,18 @@ def check_equal(observed, truth, rtol=1e-9, atol=1e-12, label: str= '') -> None:
     truth = to_numpy(truth)
     observed = to_numpy(observed)
 
-    assert truth.shape == observed.shape, f"Observed shape {observed.shape}, expected shape {truth.shape}"
+    assert (
+        truth.shape == observed.shape
+    ), f"Observed shape {observed.shape}, expected shape {truth.shape}"
     # run np.testing.assert_allclose for extra info on discrepancies
     if not np.allclose(observed, truth, rtol=rtol, atol=atol, equal_nan=True):
-        print(f'Numerical testing failed for {label}')
-        np.testing.assert_allclose(truth, observed, rtol=rtol, atol=atol, equal_nan=True)
+        print(f"Numerical testing failed for {label}")
+        np.testing.assert_allclose(
+            truth, observed, rtol=rtol, atol=atol, equal_nan=True
+        )
 
 
-def check_close(a0, b0, rtol=1e-5, atol=1e-8, label: str= '') -> None:
+def check_close(a0, b0, rtol=1e-5, atol=1e-8, label: str = "") -> None:
     """Convenience method for check_equal with tolerances defaulting to typical errors observed in neural network
     ops in float32 precision."""
     return check_equal(a0, b0, rtol=rtol, atol=atol, label=label)
@@ -110,14 +118,14 @@ class SimpleModel2(nn.Module):
         super().__init__()
 
 
-def least_squares(data, targets=None, aggregation='mean'):
+def least_squares(data, targets=None, aggregation="mean"):
     """Least squares loss (like MSELoss, but an extra 1/2 factor."""
     assert is_matrix(data), f"Expected matrix, got {data.shape}"
-    assert aggregation in ('mean', 'sum')
+    assert aggregation in ("mean", "sum")
     if targets is None:
         targets = torch.zeros_like(data)
     err = data - targets.view(-1, data.shape[1])
-    normalizer = len(data) if aggregation == 'mean' else 1
+    normalizer = len(data) if aggregation == "mean" else 1
     return torch.sum(err * err) / 2 / normalizer
 
 
@@ -128,10 +136,12 @@ def jacobian(y: torch.Tensor, x: torch.Tensor, create_graph=False):
     flat_y = y.reshape(-1)
     grad_y = torch.zeros_like(flat_y)
     for i in range(len(flat_y)):
-        grad_y[i] = 1.
-        grad_x, = torch.autograd.grad(flat_y, x, grad_y, retain_graph=True, create_graph=create_graph)
+        grad_y[i] = 1.0
+        (grad_x,) = torch.autograd.grad(
+            flat_y, x, grad_y, retain_graph=True, create_graph=create_graph
+        )
         jac.append(grad_x.reshape(x.shape))
-        grad_y[i] = 0.
+        grad_y[i] = 0.0
     return torch.stack(jac).reshape(y.shape + x.shape)
 
 
@@ -169,7 +179,7 @@ class SimpleMLP(nn.Module):
         self.d: List[int] = d
         for i in range(len(d) - 1):
             linear = nn.Linear(d[i], d[i + 1], bias=bias)
-            setattr(linear, 'name', f'{i:02d}-linear')
+            setattr(linear, "name", f"{i:02d}-linear")
             self.layers.append(linear)
             self.all_layers.append(linear)
             if nonlin:
@@ -220,8 +230,14 @@ class TinyMNIST(datasets.MNIST):
     channels. When provided with original 28, 28 resolution, generates standard 1 channel MNIST dataset.
     """
 
-    def __init__(self, dataset_root='data', data_width=4, targets_width=4, dataset_size=0,
-                 train=True):
+    def __init__(
+        self,
+        dataset_root="data",
+        data_width=4,
+        targets_width=4,
+        dataset_size=0,
+        train=True,
+    ):
         """
 
         Args:
@@ -250,14 +266,16 @@ class TinyMNIST(datasets.MNIST):
                 new_targets[i, :, :] = np.array(im) / 255
             self.data = torch.from_numpy(new_data).type(torch.get_default_dtype())
             if not original_targets:
-                self.targets = torch.from_numpy(new_targets).type(torch.get_default_dtype())
+                self.targets = torch.from_numpy(new_targets).type(
+                    torch.get_default_dtype()
+                )
         else:
             self.data = self.data.type(torch.get_default_dtype()).unsqueeze(1)
             if not original_targets:
                 self.targets = self.data
 
         if torch.cuda.is_available():
-            self.data, self.targets = self.data.to('cuda'), self.targets.to('cuda')
+            self.data, self.targets = self.data.to("cuda"), self.targets.to("cuda")
 
     def __getitem__(self, index):
         """
@@ -270,4 +288,3 @@ class TinyMNIST(datasets.MNIST):
         img, target = self.data[index], self.targets[index]
 
         return img, target
-

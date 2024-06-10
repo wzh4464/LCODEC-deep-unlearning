@@ -1,62 +1,67 @@
 import torch
 
+
 def getGradObjs(model):
     grad_objs = {}
     param_objs = {}
     for module in model.modules():
-    #for module in model.modules():
-        for (name, param)  in module.named_parameters():
+        # for module in model.modules():
+        for name, param in module.named_parameters():
             grad_objs[(str(module), name)] = param.grad
             param_objs[(str(module), name)] = param.data
 
     return grad_objs, param_objs
+
 
 def gradNorm(model):
     total_norm = 0
     for p in model.parameters():
         param_norm = p.grad.data.norm(2)
         total_norm += param_norm.item() ** 2
-    
-    total_norm = total_norm ** (1. / 2)
+
+    total_norm = total_norm ** (1.0 / 2)
     return total_norm
 
-def getHessian(dw1, dw2=None, approxType='FD', w1=None, w2=None, hessian_device='cpu'):
+
+def getHessian(dw1, dw2=None, approxType="FD", w1=None, w2=None, hessian_device="cpu"):
     original_device = dw1.device
     dw1 = dw1.to(hessian_device)
     dw2 = dw2.to(hessian_device)
-    if approxType == 'FD':
+    if approxType == "FD":
         w1 = w1.to(hessian_device)
         w2 = w2.to(hessian_device)
-    
-        #hessian = torch.matmul((dw1 - dw2), (dw1 - dw2).transpose())
-        grad_diff_outer = torch.einsum('p,q->pq', (dw1-dw2), (dw1-dw2))
- 
+
+        # hessian = torch.matmul((dw1 - dw2), (dw1 - dw2).transpose())
+        grad_diff_outer = torch.einsum("p,q->pq", (dw1 - dw2), (dw1 - dw2))
+
         # divide by weight diff:
         pdist = torch.nn.PairwiseDistance(p=1)
-        weight_scaling = pdist(w1.view(1,-1), w2.view(1,-1))
+        weight_scaling = pdist(w1.view(1, -1), w2.view(1, -1))
 
         hessian = torch.div(grad_diff_outer, weight_scaling)
 
-    elif approxType == 'Fisher':
-        hessian = torch.einsum('p,q->pq', dw1, dw1)
+    elif approxType == "Fisher":
+        hessian = torch.einsum("p,q->pq", dw1, dw1)
 
     else:
-        error('Unknown Hessian Approximation Type')
+        error("Unknown Hessian Approximation Type")
 
     return hessian.to(original_device)
 
 
 def getOldPandG(outString, epoch, model, slices_to_update, device):
 
-    name = outString + '_epoch_'  + str(epoch) + "_params.pt"
+    name = f"{outString}_epoch_{str(epoch)}_params.pt"
     paramlist = torch.load(name)
-    name = outString + '_epoch_'  + str(epoch) + "_grads.pt"
+    name = f"{outString}_epoch_{str(epoch)}_grads.pt"
     gradlist = torch.load(name)
-    vectG, vectP, _ = getVectorizedGrad(gradlist, model, slices_to_update, device, paramlist=paramlist)
+    vectG, vectP, _ = getVectorizedGrad(
+        gradlist, model, slices_to_update, device, paramlist=paramlist
+    )
 
     return vectG, vectP
 
- 
+
 def getVectorizedGrad(gradlist, model, slices_to_update, device, paramlist=None):
 
     mapDict = {}
@@ -90,5 +95,3 @@ def getVectorizedGrad(gradlist, model, slices_to_update, device, paramlist=None)
             mapDict[myKey] = myVal
 
     return vect_grad, vect_param, mapDict
-
-
